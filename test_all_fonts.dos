@@ -1,0 +1,11 @@
+; AmigaDOS Script to test all fonts in FONTS:
+; Usage: Execute test_all_fonts.dos
+
+Echo "Preparing font test list..."
+List FONTS: FILES PAT #?.font LFORMAT "Multiview %s%s" >T:run_font_tests.dos
+
+Echo "Starting tests. Close each Multiview window to proceed to the next font."
+Execute T:run_font_tests.dos
+
+Echo "Tests complete."
+Delete T:run_font_tests.dos

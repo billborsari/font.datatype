@@ -1,0 +1,11 @@
+; AmigaDOS Script to test modern font formats
+; Usage: Execute test_modern_fonts.dos <directory>
+
+.key DIR/A
+.bra {
+.ket }
+
+Echo "Testing modern fonts in {DIR}..."
+List {DIR} FILES PAT (#?.ttf|#?.otf|#?.pfb) LFORMAT "Multiview %s%s" >T:run_modern_tests.dos
+Execute T:run_modern_tests.dos
+Delete T:run_modern_tests.dos

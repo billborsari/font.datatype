@@ -1,0 +1,424 @@
+@database FontDT
+@$VER: FontDT.guide 39.5 (27.5.96)
+@(C) Michal Letowski
+@author Michal Letowski
+@index Index
+
+@node Main "FontDT 1.3"
+@prev Main
+@next Main
+
+                                  @{b}@{u}FontDT 1.3@{uu}@{ub}
+
+           @{b}FontDT@{ub} package is Copyright © 1995-96 @{"Michal Letowski" link Author}.
+                             All rights reserved.
+
+      The author's native language is Polish, so please forgive bad spelling,
+  grammar mistakes etc. Or better - correct them.
+
+  @{"Copyright notice" link Copyright} - legal informations.
+  @{"  Introduction  " link Introduction} - what it is useful for.
+  @{"  Requirements  " link Requirements} - what you need to run.
+  @{"  Installation  " link Installation} - how to install.
+  @{"  Configuration " link Configuration} - how to customize.
+  @{"      Notes     " link Notes} - some notes and comments.
+  @{"     History    " link History} - what have changed since last release.
+  @{"      To do     " link ToDo} - what needs to be done.
+
+  @{"    font_dtc    " link AutoDocs/font_dtc.doc/main} - programmer's documentation.
+@endnode
+
+@node Copyright "FontDT Copyright"
+@prev Copyright
+
+  @{b}@{u}Copyright@{uu}@{ub}
+
+  @{b}FontDT@{ub} package is Copyright © 1995-96 @{"Michal Letowski" link Author}.
+
+  @{b}FontDT@{ub} is freely distributable under the following conditions:
+    · no more than a reasonable fee is charged for copying/downloading;
+    · this distribution is not a part of other non-free distribution;
+    · the distribution is complete - it contains all the files (full list
+      at the end of this chapter);
+    · no file in the distribution is changed.
+      Distribution without meeting conditions specified above requires
+  written permission from me.
+      "Amiga Shopper" have a special permission to distribute this package
+  on their coverdisks.
+
+      The @{"DataType" link DataTypes} from the package works, but no guarantee is given nor
+  implied. In no case will I be liable for any results of using supplied
+  @{"DataType" link DataTypes}.
+
+      The source code is provided only for informational purposes and is
+  also under copyright. It is based on source for @{i}bmp.datatype @{ui}by David
+  N. Junod.
+
+      This documentation is based on @{i}CatEdit.guide@{ui}, which is Copyright ©
+  1993 Rafael D'Halleweyn.
+
+      Compugraphic, CG and Intellifont are registered trademarks of Agfa
+  Corp.
+
+      Special thanks to Mikolaj Calusinski for spotting obscure bugs.
+
+  List of all files in the distribution:
+    @{i}Install FontDT.info
+    Install FontDT
+    FontDT.guide.info
+    FontDT.guide
+    AutoDocs (dir)
+      font_dtc.doc
+    Devs.info
+    Devs (dir)
+      DataTypes.info
+      DataTypes (dir)
+        Bitmap Font.info
+        Bitmap Font
+        Outline Font.info
+        Outline Font
+    Libs (dir)
+      DataTypes (dir)
+        font.datatype
+    Prefs (dir)
+      Env-Archive
+        DataTypes
+          font1.prefs
+          font2.prefs
+          font3.prefs
+          font4.prefs
+      Presets
+        def_font1.info
+        def_font2.info
+    Src (dir)
+      classbase.c
+      classbase.h
+      classbase.i
+      classinit.asm
+      dispatch.c
+      dispatch.h
+      endcode.asm
+      font.rev.i
+      otag.c
+      otag.h
+      prefs.c
+      prefs.h@{ui}
+@endnode
+
+@node Introduction "Introduction to FontDT"
+
+  @{b}@{u}Introduction@{uu}@{ub}
+
+      @{b}FontDT@{ub} is a @{"DataTypes" link DataTypes} subclass for loading and displaying @{"Amiga fonts" link Fonts}.
+  Once installed it will let all @{"DataTypes" link DataTypes} aware programs to recognize and
+  load @{"Amiga fonts" link Fonts} as pictures.
+@endnode
+
+@node Requirements "Requirements for FontDT"
+
+  @{b}@{u}Requirements@{uu}@{ub}
+
+      @{b}FontDT@{ub} requires AmigaDOS 3.0 or higher (@{i}datatypes.library @{ui}and
+  @{i}diskfont.library @{ui}V39+). Outline fonts subsystem (@{i}bullet.library @{ui}V39+)
+  is required for accesing @{b}Compugraphic@{ub} fonts. 3rd party libraries are
+  necessary for viewing @{b}non-Compugraphic@{ub} outline fonts (eg. @{i}type1.library@{ui}
+  by Amish S. Dave for @{b}Adobe Type1@{ub} fonts).
+@endnode
+
+@node Installation "Installation of FontDT"
+
+  @{b}@{u}Installation@{uu}@{ub}
+
+      Use supplied @{i}Installer @{ui}script to copy necessary files. If you
+  go for "Manually Selectable" installation you will need to activate class
+  by double-clicking on @{i}DEVS:DataTypes/Bitmap Font @{ui}and
+  @{i}DEVS:DataTypes/Outline Font @{ui}icon or using @{i}AddDataTypes @{b}REFRESH @{ub}@{ui}from Shell.
+      Please note that neither sample config files nor icons will be
+  installed by the script (if you want to use them, you must copy them
+  manually).
+@endnode
+
+@node Configuration "Configuring operation of FontDT"
+
+  @{b}@{u}Configuration@{uu}@{ub}
+
+      You can use config files to customize operation of @{b}FontDT@{ub} and thus
+  appearance of fonts on screen. The two config files are
+  @{i}PROGDIR:Prefs/DataTypes/font.prefs@{ui} (@{i}PROGDIR: @{ui}is a standard system
+  assign and denotes drawer where given application resides) and
+  @{i}ENV:DataTypes/font.prefs @{ui}(searched in that order). Such setup seems to be
+  standard across 3rd party @{"DataTypes" link DataTypes}.
+      Each config file is a multi-line ASCII file. All lines are joined
+  together and then parsed using standard AmigaDOS template method.
+
+@{fg highlight}SYNOPSIS@{fg text}
+      [@{i}Strings@{ui}] [@{b}CENTER@{ub}] [@{b}INVERSE@{ub}] [@{b}FONTNAME@{ub}] [@{b}DPI@{ub}=@{i}DPI@{ui}]
+                [@{b}FOREGROUND@{ub}=@{i}ForegroundColor@{ui}] [@{b}BACKGROUND@{ub}=@{i}BackgroundColor@{ui}] 
+
+@{fg highlight}TEMPLATE@{fg text}
+      "STRINGS/M,CENTER=CENTRE/S,INVERSE/S,FONTNAME/S,DPI/K,
+       FG=FOREGROUND/K,BG=BACKGROUND/K"
+
+@{fg highlight}PARAMETERS@{fg text}
+      @{i}Strings @{ui}- strings to display instead of default text. By default,
+  @{b}FontDT@{ub} will show a text consisting of all characters present in a given
+  font. You can change this by supplying your own strings which will be used
+  in place of this default string. Each string (separated by spaces) will be
+  displayed as one line. If you want your text to contain spaces, enclose it
+  in "".
+      @{b}CENTER@{ub} - this option causes each line to be centered before displaying.
+  Only useful if you have supplied more than one own string or are trying to
+  display font with more than one size.
+      @{b}INVERSE@{ub} - for two-color fonts this causes @{b}FontDT@{ub} to swap foreground
+  and background colors. Does not work for color fonts.
+      @{b}FONTNAME@{ub} - if this option is given a line containing font's name and
+  size will be printed before user strings.
+      @{b}DPI@{ub} - this strings describes font's acpect ratio. It should contain
+  values for XDPI and YDPI (as described in Workbench manual), in
+  "XDPI/A/N,YDPI/A/N" format. The whole string must be enclosed in
+  double-quotes. Default values for aspect ratio are DiskFont's defaults. At
+  present this option is only useful with outline fonts.
+      @{b}FOREGROUND@{ub} - describes foreground color. The string should
+  contain levels of red, green and blue, respectively. The template is
+  "R=RED/A/N,G=GREEN/A/N,B=BLUE/A/N". The whole string must be enclosed in
+  double-quotes. Default foreground color is black. This option doesn't
+  work for color fonts.
+      @{b}BACKGROUND@{ub} - describes background color. The string should
+  contain levels of red, green and blue, respectively. The template is
+  "R=RED/A/N,G=GREEN/A/N,B=BLUE/A/N". The whole string must be enclosed in
+  double-quotes. Default background color is white. This option doesn't
+  work for color fonts.
+
+@{fg highlight}EXAMPLES@{fg text}
+      @{fg fill}@{i}FontDT is great@{ui}@{fg text} will produce:
+@{bg highlight}FontDT
+is
+great@{bg back}
+      @{fg fill}@{i}"FontDT is great"@{ui}@{fg text} will produce:
+@{bg highlight}FontDT is great@{bg back}
+      @{fg fill}@{i}"FontDT is" "great" @{ui}@{b}CENTER@{ub}@{fg text} will produce:
+@{bg highlight}FontDT is
+  great  @{bg back}
+      @{fg fill}@{i}"FontDT is" "great" @{ui}@{b}CENTER@{ub} @{b}INVERSE@{ub}@{fg text} will produce:
+@{fg highlight}@{bg text}FontDT is
+  great  @{fg text}@{bg back}
+      @{fg fill}@{b}FONTNAME@{ub}@{fg text} will produce:
+@{bg highlight}Times.font 12
+ABCDEFGHIJKLMNOPQ...
+Times.font 15
+ABCDEFGHIJKLMNOPQ...
+Times.font 18
+ABCDEFGHIJKLMNOPQ...@{bg back}
+      @{fg fill}@{i}"" @{ui}@{b}FONTNAME@{ub}@{fg text} will produce:
+@{bg highlight}Times.font 12
+Times.font 15
+Times.font 18@{bg back}
+      @{fg fill}@{i}"FontDT is great" @{ui}@{b}FONTNAME@{ub}@{fg text} will produce:
+@{bg highlight}Times.font 12
+FontDT is great
+Times.font 15
+FontDT is great
+Times.font 18
+FontDT is great@{bg back}
+
+@{fg highlight}SAMPLE CONFIGS@{fg text}
+      @{"Config 1" link Prefs/Env-Archive/DataTypes/font1.prefs/main}
+      @{"Config 2" link Prefs/Env-Archive/DataTypes/font2.prefs/main}
+      @{"Config 3" link Prefs/Env-Archive/DataTypes/font3.prefs/main}
+      @{"Config 4" link Prefs/Env-Archive/DataTypes/font4.prefs/main}
+@endnode
+
+@node Notes "FontDT Notes"
+
+  @{b}@{u}Notes@{uu}@{ub}
+
+      @{b}FontDT@{ub} shows all available sizes of a given font.
+      Since version 1.2 the font you want to view doesn't have to be in
+  @{i}FONTS: @{ui}path. To achieve that @{i}FONTS: @{ui}assign is extended for the duration
+  of @{b}FontDT@{ub} operation.
+      If you have bitmaps created for outline fonts, the DataType will only
+  show the sizes for which the bitmaps exist. Otherwise, it will try to show
+  all sizes specified with @{i}Intellifont @{ui}utility. If you have many sizes (or
+  don't have any) this will likely fail.
+      If you get "Out of memory" messages from your @{"DataTypes" link DataTypes} application,
+  then this is probably caused by too wide default string (which is made of
+  all available font characters). Use config files to change default string.
+  Choose shorter string or the one made of several lines.
+      For color fonts with many sizes color is set for the biggest size.
+      I suggest not to use @{b}FontDT@{ub} for Workbench patterns because of
+  possibility of hanging your machine. This is caused by insufficient stack
+  space for @{i}IPrefs @{ui}program which handles Workbench patterns. Since it's not
+  really my fault I'm not going to fix that. Anyway, if you decide to utilize
+  @{b}FontDT@{ub} for Workbench patterns then please note that in such case only
+  @{i}ENV:DataTypes/font.prefs @{ui}config file will be used.
+@endnode
+
+@node History "FontDT History"
+
+  @{b}@{u}History@{uu}@{ub}
+
+      @{b}Version 1.0 (22.4.95)@{ub} - initial release.
+
+      @{b}Version 1.1 (8.7.95)@{ub}
+
+    Improvements:
+    · @{b}FOREGROUND@{ub} and @{b}BACKGROUND@{ub} configuration options added;
+    · @{b}FONTNAME@{ub} can be used together with user text;
+    · Included two icons for easier fonts viewing (one normal style, one
+  color by Barry McConnell);
+    · @{b}DPI@{ub} configuration option added;
+
+    Bug fixes:
+    · Two hypothetical bugs fixed;
+    · Fonts containing all ASCII characters weren't showed at all;
+    · Fixed bug in outline fonts opening code;
+    · No longer asks for @{i}PROGDIR: @{ui}when used by @{i}IPrefs@{ui}.
+
+      @{b}Version 1.2 (6.5.96)@{ub}
+
+    Improvements:
+    · Fonts being viewed no longer need to be in FONTS: path;
+    · Configuration files may span several lines now;
+    · Shorter code.
+
+    Bug fixes:
+    · Memory leakage (about 432 bytes on each run) fixed.
+
+      @{b}Version 1.3 (27.5.96)@{ub}
+
+    Bug fixes:
+    · No longer hangs MultiView thanks to reduced stack usage;
+    · MungWall hit removed.
+@endnode
+
+@node ToDo "To do in FontDT"
+@next ToDo
+
+  @{b}@{u}To do@{uu}@{ub}
+
+      @{b}FontDT@{ub} will not deal correctly with some of the less used fonts
+  formats. If you find that your font is not displayed correctly (this
+  particularly applies to color fonts) please send it to me, so I can
+  improve the code.
+      Future versions may have ability to show just specified sizes of the
+  font.
+@endnode
+
+@node DataTypes "DataTypes Information"
+@prev DataTypes
+@next DataTypes
+
+  @{b}@{u}DataTypes@{uu}@{ub}
+
+      @{i}DataTypes @{ui}is an AmigaDOS subsystem (introduced in AmigaDOS 3.0) for
+  dealing with different types of files found on different machines (PC's,
+  Macs and Amigas). @{i}DataTypes @{ui}can be used to recognize type of any file
+  and to interpret informations stored in that file. A client application
+  such as @{i}MultiView @{ui}can then show that data in an appropriate way.
+
+      @{i}DataTypes @{ui}divide all files into the following main categories:
+      · @{i}syst @{ui}(System) - system files;
+      · @{i}text @{ui}(Text) - textual files;
+      · @{i}docu @{ui}(Document) - documents (spreadsheet data, text with
+        pictures etc.);
+      · @{i}soun @{ui}(Sound) - sound samples;
+      · @{i}inst @{ui}(Instrument) - musical instruments;
+      · @{i}musi @{ui}(Music) - songs;
+      · @{i}pict @{ui}(Picture) - graphics;
+      · @{i}anim @{ui}(Animation) - animations;
+      · @{i}movi @{ui}(Movie) - animations with sound.
+      Each category is further divided into sub-classes. Each sub-class
+  interprets one type of file, converting it to some universal format.
+  @{b}font.datatype@{ub} is a sub-class of Picture group.
+@endnode
+
+@node Fonts "Amiga fonts"
+@prev Fonts
+@next Fonts
+
+  @{b}@{u}Amiga fonts@{uu}@{ub}
+
+      Amiga fonts come in three basic types:
+      · traditional @{i}bitmap fonts @{ui}are two-color fonts. For each size there
+  exists a separate file containing bitmap description of all characters
+  designed for that size.
+      · @{i}color fonts @{ui}are stored like bitmap ones, but they may contain
+  additional informations about color palette used when putting them on
+  screen.
+      · @{i}outline fonts @{ui}were introduced with release 2.04 of the operating
+  system. Each outline fonts contains vector description of its characters
+  which can be reproduced at any size - because they are scalable. From
+  release 3.0 of the operating system it is possible to use outline fonts
+  other than @{b}Compugraphic@{ub} (with additional software).
+      Each font has a description file (@{i}xxxxx.font@{ui}) containing informations
+  about available sizes and their properties. @{b}FontDT@{ub} operates on such files
+  @{u}only@{uu}.
+@endnode
+
+@node Author "About the Author"
+@prev Author
+@next Author
+
+  @{b}@{u}About the Author@{uu}@{ub}
+
+      My name is @{b}Michal Letowski@{ub} and I hold Master degree in Computer
+  Science. I live in Wroclaw, Poland where I work as a information science
+  teacher in XXIV Secondary School.
+
+      If you have something to say me (questions, remarks, suggestions,
+  wishes, bug reports) please contact me (I like receiving mail!):
+
+    by E-Mail (preferred way):
+
+      @{b}pro37@ci3ux.ci.pwr.wroc.pl@{ub} (valid until 1.7.96)
+
+    by normal mail:
+
+      @{b}Michal Letowski
+      Przyjazni 51/17
+      53-030 Wroclaw
+
+      POLAND@{ub}
+
+      You can get the following free software written by me:
+
+   @{"  BYTEmark " beep} - Amiga port of @{i}BYTE @{ui}magazine portable benchmarks.
+      (@{i}Aminet://util/moni/BYTEmark-2.1.lha@{ui});
+   @{"   MakeDT  " beep} - create DataTypes recog files easily
+      (@{i}Aminet://dev/misc/MakeDT-1.3.lha@{ui});
+   @{" MCommands " beep} - 8 useful AmigaDOS CLI commands
+      (@{i}Aminet://util/cli/MComms-1.4.lha@{ui});
+   @{"    MCEd   " beep} - 8 great ARexx scripts for @{i}CygnusEd @{ui}users
+      (@{i}Aminet://text/edit/MCEd-1.3.lha@{ui});
+   @{"    MSys   " beep} - 4 AmigaDOS replacement commands
+      (@{i}Aminet://util/sys/MSys-1.0.lha@{ui});
+   @{"ClipHandler" beep} - easily exchange data between AmigaDOS and applications
+      (@{i}Aminet://util/misc/ClipHan-1.3.lha@{ui});
+   @{"   FontDT  " beep} - DataType for Amiga fonts
+      (@{i}Aminet://util/dtype/FontDT-1.3.lha@{ui});
+   @{"   MREKO   " beep} - DataType for viewing @{i}REKO @{ui}cardsets
+      (@{i}Aminet://util/dtype/MREKO-1.0.lha@{ui});
+   @{"   XPKDT   " beep} - DataType for XPK packed files.
+      (@{i}Aminet://util/dtype/XPKDT-1.0B.lha@{ui}).
+@endnode
+
+@node Index "FontDT Index"
+@prev Index
+@next Index
+
+  @{b}@{u}Index@{uu}@{ub}
+
+  @{"     Author     " link Author}
+  @{"  Configuration " link Configuration}
+  @{"Copyright notice" link Copyright}
+  @{"    DataTypes   " link DataTypes}
+  @{"      Fonts     " link Fonts}
+  @{"     History    " link History}
+  @{"  Installation  " link Installation}
+  @{"  Introduction  " link Introduction}
+  @{"      Notes     " link Notes}
+  @{"  Requirements  " link Requirements}
+  @{"      To do     " link ToDo}
+
+  @{"    font_dtc    " link AutoDocs/font_dtc.doc/main}
+@endnode

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<datatype>
+	<name>Font</name>
+	<basename>font</basename>
+	<group>font</group>
+	<id>FONT</id>
+	<flags>binary</flags>
+	<priority>0</priority>
+	<mask offset="0">
+		<data>0F00</data>
+		<mask>FFFF</mask>
+	</mask>
+</datatype>

@@ -1,0 +1,39 @@
+CC = ppc-amigaos-gcc
+STRIP = ppc-amigaos-strip
+SDK = /opt/code/Amiga-dev-MCP/SDK
+
+# Common flags
+CFLAGS = -O2 -Wall -gstabs -fno-strict-aliasing -mcrt=newlib \
+         -D__AMIGAVERSION__=54 -D__AMIGAREVISION__=1 \
+         -I$(SDK)/include/include_h -I$(SDK)/newlib/include
+
+# Flags for library (Relocatable)
+LIB_CFLAGS = $(CFLAGS) -fPIC
+LIB_LDFLAGS = -mcrt=newlib -nostartfiles -Wl,-q -Wl,-Map=font.datatype.map
+
+# Flags for standalone tools
+TOOL_LDFLAGS = -mcrt=newlib
+
+all: font.datatype Recognizer font2bmp
+
+font.datatype: init.o dispatch.o
+	$(CC) $(LIB_LDFLAGS) -o $@ $^
+
+init.o: init.c classbase.h
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+dispatch.o: dispatch.c classbase.h
+	$(CC) $(LIB_CFLAGS) -c -o $@ $<
+
+Recognizer: Recognizer.o
+	$(CC) $(TOOL_LDFLAGS) -o $@ $^
+	$(STRIP) -s $@
+
+Recognizer.o: Recognizer.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+font2bmp: font2bmp.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+clean:
+	rm -f *.o font.datatype Recognizer font2bmp *.map

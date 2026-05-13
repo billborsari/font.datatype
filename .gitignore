@@ -1,0 +1,35 @@
+# AmigaOS 4 Font DataType Git Ignore
+
+# Object files
+*.o
+
+# Compiled binaries
+font.datatype
+Recognizer
+font2bmp
+dtidentify
+
+# Build artifacts
+*.map
+*.rev
+
+# Logs and debug output
+*.log
+out.iff
+out.ppm
+font_descriptor.bin
+
+# Temporary and scratch files
+scratch/
+release/
+test_pic.c
+init.c.clean
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor backups
+*~
+*.swp
+*.swo
