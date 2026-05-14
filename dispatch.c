@@ -50,17 +50,21 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **
     }
 
     /* Try 3: Direct FreeType forcing */
+    char font_name[256];
+    IUtility->SNPrintf(font_name, 256, "%s.font", name);
+
     struct TagItem ft_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
         { OT_Engine,    (uintptr_t)"freetype" }, 
         { OT_FontFile,  (uintptr_t)filename },
         { OT_FontFormat, (uintptr_t)"truetype" },
+        { OT_PointHeight, (uint32)(size << 16) }, /* Fixed point 16.16 */
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta3 = { name, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
+    struct TTextAttr tta3 = { font_name, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
+        LogDebug("OpenBestFont: SUCCESS via FreeType forcing (name=%s)", font_name);
         if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; 
         return tf; 
     }
