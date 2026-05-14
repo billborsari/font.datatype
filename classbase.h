@@ -11,6 +11,9 @@
 #include <datatypes/datatypes.h>
 #include <datatypes/pictureclass.h>
 #include <diskfont/diskfonttag.h>
+#include <libraries/locale.h>
+#include <libraries/iffparse.h>
+#include <stdarg.h>
 
 
 
@@ -24,6 +27,19 @@
 #include <interfaces/iffparse.h>
 #include <interfaces/datatypes.h>
 #include <interfaces/diskfont.h>
+#include <interfaces/locale.h>
+
+struct IFF_BitMapHeader {
+    UWORD w, h;
+    WORD  x, y;
+    UBYTE nPlanes;
+    UBYTE masking;
+    UBYTE compression;
+    UBYTE pad1;
+    UWORD transparentColor;
+    UBYTE xAspect, yAspect;
+    WORD  pageWidth, pageHeight;
+};
 
 struct DTClassIFace
 {
@@ -87,6 +103,8 @@ struct InstanceData {
 #define DATATYPEVERSION 54
 #define DATATYPEREVISION 1
 
-#define DPRINTF(fmt, ...) IExec->DebugPrintF("[%s] " fmt, DATATYPENAME, ##__VA_ARGS__)
+#define DPRINTF(fmt, ...) LogDebug(fmt, ##__VA_ARGS__)
+
+void LogDebug(const char *fmt, ...);
 
 #endif
