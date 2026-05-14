@@ -55,7 +55,6 @@ uint32 _manager_Release(struct LibraryManagerInterface *Self)
 struct Library * _manager_Open(struct LibraryManagerInterface *Self, uint32 version)
 { 
     struct ClassBase *cb = (struct ClassBase *)Self->Data.LibBase;
-    if (IExec) IExec->DebugPrintF("[font.datatype] _manager_Open version %u\n", version);
     cb->cb_Lib.lib_OpenCnt++;
     return (struct Library *)cb; 
 }
@@ -63,7 +62,6 @@ struct Library * _manager_Open(struct LibraryManagerInterface *Self, uint32 vers
 APTR _manager_Close(struct LibraryManagerInterface *Self)
 { 
     struct ClassBase *cb = (struct ClassBase *)Self->Data.LibBase;
-    if (IExec) IExec->DebugPrintF("[font.datatype] _manager_Close\n");
     cb->cb_Lib.lib_OpenCnt--;
     return NULL; 
 }
@@ -72,8 +70,6 @@ APTR _manager_LibExpunge(struct LibraryManagerInterface *Self)
 {
     struct ClassBase *cb = (struct ClassBase *)Self->Data.LibBase;
     BPTR seglist = cb->cb_SegList;
-
-    if (IExec) IExec->DebugPrintF("[font.datatype] _manager_LibExpunge entry\n");
 
     if (cb->cb_Lib.lib_OpenCnt == 0) {
         if (cb->cb_Class && IIntuition) {
@@ -158,8 +154,6 @@ struct Library * libInit(struct Library *LibraryBase, BPTR seglist, struct Inter
     IExec = (struct ExecIFace *)exec;
     SysBase = (struct Library *)((uint32)IExec->Data.LibBase);
 
-    IExec->DebugPrintF("[font.datatype] libInit " FULLVERSION " entry\n");
-
     cb->cb_Lib.lib_Node.ln_Type = NT_LIBRARY;
     cb->cb_Lib.lib_Node.ln_Name = (STRPTR)DATATYPENAME;
     cb->cb_Lib.lib_Flags        = LIBF_SUMUSED|LIBF_CHANGED;
@@ -171,27 +165,27 @@ struct Library * libInit(struct Library *LibraryBase, BPTR seglist, struct Inter
     /* Trace Dependencies */
     NewlibBase = IExec->OpenLibrary("newlib.library", 52);
     if (NewlibBase) INewlib = IExec->GetInterface(NewlibBase, "main", 1, NULL);
-    if (!INewlib) { IExec->DebugPrintF("[font.datatype] ERROR: newlib failed\n"); return NULL; }
+    if (!INewlib) { return NULL; }
 
     DOSBase = IExec->OpenLibrary("dos.library", 52);
     if (DOSBase) IDOS = (struct DOSIFace *)IExec->GetInterface(DOSBase, "main", 1, NULL);
-    if (!IDOS) { IExec->DebugPrintF("[font.datatype] ERROR: dos failed\n"); return NULL; }
+    if (!IDOS) { return NULL; }
 
     IntuitionBase = IExec->OpenLibrary("intuition.library", 52);
     if (IntuitionBase) IIntuition = (struct IntuitionIFace *)IExec->GetInterface(IntuitionBase, "main", 1, NULL);
-    if (!IIntuition) { IExec->DebugPrintF("[font.datatype] ERROR: intuition failed\n"); return NULL; }
+    if (!IIntuition) { return NULL; }
 
     GraphicsBase = IExec->OpenLibrary("graphics.library", 52);
     if (GraphicsBase) IGraphics = (struct GraphicsIFace *)IExec->GetInterface(GraphicsBase, "main", 1, NULL);
-    if (!IGraphics) { IExec->DebugPrintF("[font.datatype] ERROR: graphics failed\n"); return NULL; }
+    if (!IGraphics) { return NULL; }
 
     DataTypesBase = IExec->OpenLibrary("datatypes.library", 52);
     if (DataTypesBase) IDataTypes = (struct DataTypesIFace *)IExec->GetInterface(DataTypesBase, "main", 1, NULL);
-    if (!IDataTypes) { IExec->DebugPrintF("[font.datatype] ERROR: datatypes failed\n"); return NULL; }
+    if (!IDataTypes) { return NULL; }
 
     DiskfontBase = IExec->OpenLibrary("diskfont.library", 52);
     if (DiskfontBase) IDiskfont = (struct DiskfontIFace *)IExec->GetInterface(DiskfontBase, "main", 1, NULL);
-    if (!IDiskfont) { IExec->DebugPrintF("[font.datatype] ERROR: diskfont failed\n"); return NULL; }
+    if (!IDiskfont) { return NULL; }
 
     LocaleBase = IExec->OpenLibrary("locale.library", 52);
     if (LocaleBase) ILocale = (struct LocaleIFace *)IExec->GetInterface(LocaleBase, "main", 1, NULL);
@@ -201,20 +195,19 @@ struct Library * libInit(struct Library *LibraryBase, BPTR seglist, struct Inter
     FT2Base = IExec->OpenLibrary("ft2.library", 52);
     if (FT2Base) IFT2 = IExec->GetInterface(FT2Base, "main", 1, NULL);
     /* Note: ft2.library is optional for now, we won't fail if it's missing but we will log it */
-    if (!IFT2) { IExec->DebugPrintF("[font.datatype] WARNING: ft2.library failed to open main interface\n"); }
+    if (!IFT2) { }
 
     UtilityBase = IExec->OpenLibrary("utility.library", 52);
     if (UtilityBase) IUtility = (struct UtilityIFace *)IExec->GetInterface(UtilityBase, "main", 1, NULL);
-    if (!IUtility) { IExec->DebugPrintF("[font.datatype] ERROR: utility failed\n"); return NULL; }
+    if (!IUtility) { return NULL; }
 
     IFFParseBase = IExec->OpenLibrary("iffparse.library", 52);
     if (IFFParseBase) IIFFParse = (struct IFFParseIFace *)IExec->GetInterface(IFFParseBase, "main", 1, NULL);
-    if (!IIFFParse) { IExec->DebugPrintF("[font.datatype] ERROR: iffparse failed\n"); return NULL; }
+    if (!IIFFParse) { return NULL; }
 
     cb->cb_Class = InitClass(cb);
-    if (!cb->cb_Class) { IExec->DebugPrintF("[font.datatype] ERROR: class init failed\n"); return NULL; }
+    if (!cb->cb_Class) { return NULL; }
 
-    IExec->DebugPrintF("[font.datatype] libInit SUCCESSFUL (FT2Base=%p)\n", FT2Base);
     return (struct Library *)cb;
 }
 

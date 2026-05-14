@@ -421,9 +421,6 @@ void LogDebug(const char *fmt, ...)
 
     IUtility->SNPrintf(final_msg, sizeof(final_msg), "[font.datatype] %s", buffer);
 
-    /* Also print to serial for immediate feedback if a debugger is attached */
-    IExec->DebugPrintF("%s", final_msg);
-
     /* Route to T: for triage - Use MODE_READWRITE + ChangeFilePosition because MODE_APPEND is not always defined */
     BPTR log = IDOS->Open("T:font.datatype.log", MODE_READWRITE);
     if (!log) {
