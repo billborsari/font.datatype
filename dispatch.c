@@ -29,42 +29,68 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **
     struct TextFont *tf = NULL;
     STRPTR name = (STRPTR)IDOS->FilePart(filename);
 
+    LogDebug("OpenBestFont: Attempting to load '%s' at size %d", filename, size);
+
     /* Try 1: Standard OpenDiskFont (.font or installed) */
     struct TTextAttr tta1 = { name, size, FSF_TAGGED, FPF_DISKFONT, NULL };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta1);
-    if (tf) { if (engine_name) *engine_name = "diskfont.library (Standard)"; return tf; }
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via Standard OpenDiskFont");
+        if (engine_name) *engine_name = "diskfont.library (Standard)"; 
+        return tf; 
+    }
 
     /* Try 2: Full path (uninstalled .font) */
     struct TTextAttr tta2 = { filename, size, FSF_TAGGED, FPF_DISKFONT, NULL };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta2);
-    if (tf) { if (engine_name) *engine_name = "diskfont.library (Standard/Path)"; return tf; }
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via Path OpenDiskFont");
+        if (engine_name) *engine_name = "diskfont.library (Standard/Path)"; 
+        return tf; 
+    }
 
     /* Try 3: Direct FreeType forcing */
     struct TagItem ft_tags[] = { 
-        { OT_Engine,   (uintptr_t)"freetype" }, 
-        { OT_FontFile, (uintptr_t)filename },
-        { TAG_DONE,    0 } 
+        { OT_DeviceDPI, (72 << 16) | 72 },
+        { OT_Engine,    (uintptr_t)"freetype" }, 
+        { OT_FontFile,  (uintptr_t)filename },
+        { OT_FontFormat, (uintptr_t)"truetype" },
+        { TAG_DONE,     0 } 
     };
     struct TTextAttr tta3 = { name, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
-    if (tf) { if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; return tf; }
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
+        if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; 
+        return tf; 
+    }
 
     /* Try 4: Direct Bullet forcing */
     struct TagItem bullet_tags[] = { 
-        { OT_Engine,   (uintptr_t)"bullet" }, 
-        { OT_FontFile, (uintptr_t)filename },
-        { TAG_DONE,    0 } 
+        { OT_DeviceDPI, (72 << 16) | 72 },
+        { OT_Engine,    (uintptr_t)"bullet" }, 
+        { OT_FontFile,  (uintptr_t)filename },
+        { TAG_DONE,     0 } 
     };
     struct TTextAttr tta4 = { name, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
-    if (tf) { if (engine_name) *engine_name = "diskfont.library (Bullet Engine)"; return tf; }
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
+        if (engine_name) *engine_name = "diskfont.library (Bullet Engine)"; 
+        return tf; 
+    }
 
     /* Try 5: Legacy non-tagged */
     struct TextAttr ta5 = { filename, size, 0, 0 };
     tf = IDiskfont->OpenDiskFont(&ta5);
-    if (tf) { if (engine_name) *engine_name = "diskfont.library (Legacy)"; return tf; }
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via Legacy OpenDiskFont");
+        if (engine_name) *engine_name = "diskfont.library (Legacy)"; 
+        return tf; 
+    }
 
     /* Final fallback: Topaz */
+    LogDebug("OpenBestFont: ALL modern paths failed, falling back to Topaz");
     struct TextAttr ta6 = { "topaz.font", 8, 0, 0 };
     tf = IGraphics->OpenFont(&ta6);
     if (tf) { if (engine_name) *engine_name = "graphics.library (Fallback Topaz)"; }
