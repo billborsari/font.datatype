@@ -27,15 +27,16 @@ Class *_DTClass_ObtainEngine(struct DTClassIFace *Self)
 static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **engine_name)
 {
     struct TextFont *tf = NULL;
-    STRPTR name = (STRPTR)IDOS->FilePart(filename);
+    if (!filename || filename[0] == '\0') return NULL;
 
-    LogDebug("OpenBestFont: Attempting to load '%s' at size %d", filename, size);
+    STRPTR name = (STRPTR)IDOS->FilePart(filename);
+    LogDebug("OpenBestFont: Attempting '%s' size %d", filename, size);
 
     /* Try 1: Standard OpenDiskFont (.font or installed) */
     struct TTextAttr tta1 = { name, size, FSF_TAGGED, FPF_DISKFONT, NULL };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta1);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via Standard OpenDiskFont");
+        LogDebug("OpenBestFont: SUCCESS via Standard");
         if (engine_name) *engine_name = "diskfont.library (Standard)"; 
         return tf; 
     }
@@ -44,27 +45,28 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **
     struct TTextAttr tta2 = { filename, size, FSF_TAGGED, FPF_DISKFONT, NULL };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta2);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via Path OpenDiskFont");
+        LogDebug("OpenBestFont: SUCCESS via Path");
         if (engine_name) *engine_name = "diskfont.library (Standard/Path)"; 
         return tf; 
     }
 
-    /* Try 3: Direct FreeType forcing */
+    /* Try 3: Direct FreeType forcing with full path and OTagPath */
     char font_name[256];
     IUtility->SNPrintf(font_name, 256, "%s.font", name);
 
     struct TagItem ft_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
+        { OT_OTagPath,  (uintptr_t)filename },
         { OT_Engine,    (uintptr_t)"freetype" }, 
         { OT_FontFile,  (uintptr_t)filename },
         { OT_FontFormat, (uintptr_t)"truetype" },
-        { OT_PointHeight, (uint32)(size << 16) }, /* Fixed point 16.16 */
+        { OT_PointHeight, (uint32)(size << 16) },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta3 = { font_name, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
+    struct TTextAttr tta3 = { (STRPTR)filename, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via FreeType forcing (name=%s)", font_name);
+        LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
         if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; 
         return tf; 
     }
@@ -72,11 +74,12 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **
     /* Try 4: Direct Bullet forcing */
     struct TagItem bullet_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
+        { OT_OTagPath,  (uintptr_t)filename },
         { OT_Engine,    (uintptr_t)"bullet" }, 
         { OT_FontFile,  (uintptr_t)filename },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta4 = { name, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
+    struct TTextAttr tta4 = { (STRPTR)filename, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
@@ -88,13 +91,13 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **
     struct TextAttr ta5 = { filename, size, 0, 0 };
     tf = IDiskfont->OpenDiskFont(&ta5);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via Legacy OpenDiskFont");
+        LogDebug("OpenBestFont: SUCCESS via Legacy");
         if (engine_name) *engine_name = "diskfont.library (Legacy)"; 
         return tf; 
     }
 
     /* Final fallback: Topaz */
-    LogDebug("OpenBestFont: ALL modern paths failed, falling back to Topaz");
+    LogDebug("OpenBestFont: Falling back to Topaz");
     struct TextAttr ta6 = { "topaz.font", 8, 0, 0 };
     tf = IGraphics->OpenFont(&ta6);
     if (tf) { if (engine_name) *engine_name = "graphics.library (Fallback Topaz)"; }
@@ -107,9 +110,14 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
 {
     Object *newobj;
     struct InstanceData *id;
+    char local_filename[256] = "";
     STRPTR filename = (STRPTR)IUtility->GetTagData(DTA_Name, 0, msg->ops_AttrList);
 
-    DPRINTF("OM_NEW: %s\n", filename ? filename : "NULL");
+    if (filename) {
+        IUtility->Strlcpy(local_filename, filename, 256);
+    }
+
+    LogDebug("OM_NEW: filename='%s'", local_filename);
     
     /*
      * Pass DTA_GroupID=GID_PICTURE so picture.datatype superclass knows the type.
@@ -138,10 +146,7 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
     id->id_Font    = NULL;
     id->id_BitMap  = NULL;
     id->id_ColorMap = NULL;
-
-    if (filename) {
-        IUtility->Strlcpy(id->id_Name, filename, 256);
-    }
+    IUtility->Strlcpy(id->id_Name, local_filename, 256);
 
     /* Preview configuration with localization support */
     const char *preview_text = "The quick brown fox jumps over the lazy dog 0123456789 !@#$%^&*()_+";
@@ -163,8 +168,8 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
         }
     }
 
-    static const uint16 preview_sizes[] = {11, 15, 20, 36, 50};
-    const int num_sizes = sizeof(preview_sizes) / sizeof(preview_sizes[0]);
+    uint16 preview_sizes[] = {11, 15, 20, 36, 50};
+    const int num_sizes = 5;
     
     /* Calculate total height and max width */
     id->id_Width  = 640;
@@ -179,7 +184,7 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
 
     /* Loop 1: Measure height */
     for (int i = 0; i < num_sizes; i++) {
-        struct TextFont *temp_font = OpenBestFont(filename, preview_sizes[i], &final_engine_name);
+        struct TextFont *temp_font = OpenBestFont(local_filename, preview_sizes[i], &final_engine_name);
         if (temp_font) {
             if (!first_open_success) {
                 DPRINTF("OM_NEW: Engine %s\n", final_engine_name);
@@ -218,7 +223,7 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
 
         int current_y = 24;
         for (int i = 0; i < num_sizes; i++) {
-            struct TextFont *temp_font = OpenBestFont(filename, preview_sizes[i], NULL);
+            struct TextFont *temp_font = OpenBestFont(local_filename, preview_sizes[i], NULL);
             if (temp_font) {
                 IGraphics->SetFont(&rp, temp_font);
                 IGraphics->Move(&rp, 8, current_y + temp_font->tf_Baseline);
