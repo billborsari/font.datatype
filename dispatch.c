@@ -1,4 +1,6 @@
 #include "classbase.h"
+#include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <libraries/iffparse.h>
 #include <graphics/modeid.h>
@@ -52,7 +54,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
 
     /* Try 3: Direct FreeType forcing with full path and OTagPath */
     char font_name[256];
-    IUtility->SNPrintf(font_name, 256, "%s.font", name);
+    snprintf(font_name, 256, "%s.font", name);
 
     struct TagItem ft_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
@@ -63,7 +65,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         { OT_PointHeight, (uint32)(size << 16) },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta3 = { (STRPTR)filename, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
+    struct TTextAttr tta3 = { font_name, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
@@ -79,7 +81,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         { OT_FontFile,  (uintptr_t)filename },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta4 = { (STRPTR)filename, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
+    struct TTextAttr tta4 = { font_name, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
@@ -124,6 +126,16 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
 
     if (filename && filename[0] != '\0') {
         IUtility->Strlcpy(local_filename, filename, 256);
+        
+        /* Resolve to absolute path */
+        BPTR lock = IDOS->Lock(local_filename, SHARED_LOCK);
+        if (lock) {
+            char abs_path[1024];
+            if (IDOS->NameFromLock(lock, abs_path, sizeof(abs_path))) {
+                IUtility->Strlcpy(local_filename, abs_path, 256);
+            }
+            IDOS->UnLock(lock);
+        }
     } else {
         /* If name is missing, try DTA_Title or DTA_SourceAddress? No. */
         LogDebug("OM_NEW: DTA_Name is missing or empty!");
@@ -473,10 +485,10 @@ void LogDebug(const char *fmt, ...)
     char buffer[800];
 
     va_start(args, fmt);
-    IUtility->VSNPrintf(buffer, sizeof(buffer), fmt, args);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
-    IUtility->SNPrintf(final_msg, sizeof(final_msg), "[font.datatype] %s\n", buffer);
+    snprintf(final_msg, sizeof(final_msg), "[font.datatype] %s\n", buffer);
 
     /* Route to T: for triage */
     BPTR log = IDOS->Open("T:font.datatype.log", MODE_READWRITE);
