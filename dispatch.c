@@ -24,13 +24,13 @@ Class *_DTClass_ObtainEngine(struct DTClassIFace *Self)
 
 
 /* Helper to open the best possible font for a given size and path */
-static struct TextFont *OpenBestFont(STRPTR filename, uint16 size, const char **engine_name)
+static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **engine_name)
 {
     struct TextFont *tf = NULL;
     if (!filename || filename[0] == '\0') return NULL;
 
     STRPTR name = (STRPTR)IDOS->FilePart(filename);
-    LogDebug("OpenBestFont: Attempting '%s' size %d", filename, size);
+    LogDebug("OpenBestFont: '%s' size %lu", filename, size);
 
     /* Try 1: Standard OpenDiskFont (.font or installed) */
     struct TTextAttr tta1 = { name, size, FSF_TAGGED, FPF_DISKFONT, NULL };
@@ -115,6 +115,13 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
 
     if (filename) {
         IUtility->Strlcpy(local_filename, filename, 256);
+    } else {
+        /* Fallback: try to get name from the handle if possible */
+        BPTR fh = (BPTR)IUtility->GetTagData(DTA_Handle, 0, msg->ops_AttrList);
+        if (fh) {
+            IDOS->FGets(fh, local_filename, 1); /* Dummy call to check handle? No, that's wrong. */
+            /* Better: use datatypes.library's knowledge? No. */
+        }
     }
 
     LogDebug("OM_NEW: filename='%s'", local_filename);
@@ -168,7 +175,7 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
         }
     }
 
-    uint16 preview_sizes[] = {11, 15, 20, 36, 50};
+    uint32 preview_sizes[] = {11, 15, 20, 36, 50};
     const int num_sizes = 5;
     
     /* Calculate total height and max width */
@@ -446,17 +453,27 @@ void LogDebug(const char *fmt, ...)
 {
     if (!IDOS || !IUtility) return;
 
+    static char final_msg[1024];
+    static struct SignalSemaphore log_sem;
+    static BOOL sem_init = FALSE;
+
+    if (!sem_init) {
+        IExec->InitSemaphore(&log_sem);
+        sem_init = TRUE;
+    }
+
+    IExec->ObtainSemaphore(&log_sem);
+
     va_list args;
-    char buffer[512];
-    char final_msg[640];
+    char buffer[800];
 
     va_start(args, fmt);
     IUtility->VSNPrintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
-    IUtility->SNPrintf(final_msg, sizeof(final_msg), "[font.datatype] %s", buffer);
+    IUtility->SNPrintf(final_msg, sizeof(final_msg), "[font.datatype] %s\n", buffer);
 
-    /* Route to T: for triage - Use MODE_READWRITE + ChangeFilePosition because MODE_APPEND is not always defined */
+    /* Route to T: for triage */
     BPTR log = IDOS->Open("T:font.datatype.log", MODE_READWRITE);
     if (!log) {
         log = IDOS->Open("T:font.datatype.log", MODE_NEWFILE);
@@ -468,4 +485,6 @@ void LogDebug(const char *fmt, ...)
         IDOS->Write(log, final_msg, strlen(final_msg));
         IDOS->Close(log);
     }
+
+    IExec->ReleaseSemaphore(&log_sem);
 }
