@@ -51,11 +51,20 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         if (engine_name) *engine_name = "diskfont.library (Standard/Path)"; 
         return tf; 
     }
+    /* diskfont.library REQUIRES a valid .font file on disk to parse the FCH_ID 
+     * before it will even look at the inline tags for direct engine routing.
+     * We create a dummy .font file in T: with the 0x0F03 (Outline) ID.
+     */
+    char dummy_font[256];
+    snprintf(dummy_font, 256, "T:font_dt_dummy_%lx.font", (uint32)IExec->FindTask(NULL));
+    BPTR dummy_fh = IDOS->Open(dummy_font, MODE_NEWFILE);
+    if (dummy_fh) {
+        uint16 fch[2] = { 0x0F03, 0 }; /* FCH_ID for outline, 0 entries */
+        IDOS->Write(dummy_fh, fch, sizeof(fch));
+        IDOS->Close(dummy_fh);
+    }
 
-    /* Try 3: Direct FreeType forcing with full path and OTagPath */
-    char font_name[256];
-    snprintf(font_name, 256, "%s.font", name);
-
+    /* Try 3: Direct FreeType forcing via dummy .font and inline tags */
     struct TagItem ft_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
         { OT_OTagPath,  (uintptr_t)filename },
@@ -65,11 +74,12 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         { OT_PointHeight, (uint32)(size << 16) },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta3 = { font_name, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
+    struct TTextAttr tta3 = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
         if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; 
+        IDOS->Delete(dummy_font);
         return tf; 
     }
 
@@ -81,13 +91,16 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         { OT_FontFile,  (uintptr_t)filename },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta4 = { font_name, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
+    struct TTextAttr tta4 = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
         if (engine_name) *engine_name = "diskfont.library (Bullet Engine)"; 
+        IDOS->Delete(dummy_font);
         return tf; 
     }
+
+    IDOS->Delete(dummy_font);
 
     /* Try 5: Legacy non-tagged */
     struct TextAttr ta5 = { filename, size, 0, 0 };
