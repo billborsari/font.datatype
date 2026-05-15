@@ -67,14 +67,14 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     /* Try 3: Direct FreeType forcing via dummy .font and inline tags */
     struct TagItem ft_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
-        { OT_OTagPath,  (uintptr_t)filename },
-        { OT_Engine,    (uintptr_t)"freetype" }, 
+        { OT_OTagPath,  (uintptr_t)dummy_font },
+        { OT_Engine,    (uintptr_t)"ft2" }, 
         { OT_FontFile,  (uintptr_t)filename },
         { OT_FontFormat, (uintptr_t)"truetype" },
         { OT_PointHeight, (uint32)(size << 16) },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta3 = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, ft_tags };
+    struct TTextAttr tta3 = { dummy_font, size, 0, FSF_TAGGED | FPF_DISKFONT, ft_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
@@ -86,12 +86,12 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     /* Try 4: Direct Bullet forcing */
     struct TagItem bullet_tags[] = { 
         { OT_DeviceDPI, (72 << 16) | 72 },
-        { OT_OTagPath,  (uintptr_t)filename },
+        { OT_OTagPath,  (uintptr_t)dummy_font },
         { OT_Engine,    (uintptr_t)"bullet" }, 
         { OT_FontFile,  (uintptr_t)filename },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta4 = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
+    struct TTextAttr tta4 = { dummy_font, size, 0, FSF_TAGGED | FPF_DISKFONT, bullet_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
