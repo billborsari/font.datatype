@@ -111,20 +111,25 @@ static uint32 Method_New(Class *cl, Object *o, struct opSet *msg)
     Object *newobj;
     struct InstanceData *id;
     char local_filename[256] = "";
-    STRPTR filename = (STRPTR)IUtility->GetTagData(DTA_Name, 0, msg->ops_AttrList);
+    struct TagItem *tag;
+    struct TagItem *tstate;
 
-    if (filename) {
-        IUtility->Strlcpy(local_filename, filename, 256);
-    } else {
-        /* Fallback: try to get name from the handle if possible */
-        BPTR fh = (BPTR)IUtility->GetTagData(DTA_Handle, 0, msg->ops_AttrList);
-        if (fh) {
-            IDOS->FGets(fh, local_filename, 1); /* Dummy call to check handle? No, that's wrong. */
-            /* Better: use datatypes.library's knowledge? No. */
-        }
+    /* Diagnostic: log all tags */
+    tstate = msg->ops_AttrList;
+    while ((tag = IUtility->NextTagItem(&tstate))) {
+        LogDebug("Tag: 0x%08lx Value: 0x%08lx", tag->ti_Tag, tag->ti_Data);
     }
 
-    LogDebug("OM_NEW: filename='%s'", local_filename);
+    STRPTR filename = (STRPTR)IUtility->GetTagData(DTA_Name, 0, msg->ops_AttrList);
+
+    if (filename && filename[0] != '\0') {
+        IUtility->Strlcpy(local_filename, filename, 256);
+    } else {
+        /* If name is missing, try DTA_Title or DTA_SourceAddress? No. */
+        LogDebug("OM_NEW: DTA_Name is missing or empty!");
+    }
+
+    LogDebug("OM_NEW: final local_filename='%s'", local_filename);
     
     /*
      * Pass DTA_GroupID=GID_PICTURE so picture.datatype superclass knows the type.
