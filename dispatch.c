@@ -65,9 +65,10 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         /* Write a dummy TFontContents entry (260 bytes) */
         char dummy_tfc[260];
         memset(dummy_tfc, 0, 260);
-        /* Set tfc_YSize to the requested size just in case */
-        dummy_tfc[256] = (size >> 8) & 0xFF;
-        dummy_tfc[257] = size & 0xFF;
+        /* tfc_FileName is 256 bytes, tfc_TagCount is 2 bytes, tfc_YSize is 2 bytes */
+        /* Set tfc_YSize at offset 258 */
+        dummy_tfc[258] = (size >> 8) & 0xFF;
+        dummy_tfc[259] = size & 0xFF;
         IDOS->Write(dummy_fh, dummy_tfc, 260);
         
         IDOS->Close(dummy_fh);
@@ -100,8 +101,13 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         IUtility->Strlcpy(otag_buf + offset, filename, sizeof(otag_buf) - offset);
         offset += strlen(otag_buf + offset) + 1;
 
-        otag[4].ti_Tag = OT_PointHeight;
-        otag[4].ti_Data = (uint32)(size << 16);
+        otag[4].ti_Tag = OT_AvailSizes;
+        offset = (offset + 3) & ~3; /* Align to 4 bytes before array */
+        otag[4].ti_Data = offset;
+        uint16 *sizes_arr = (uint16 *)(otag_buf + offset);
+        sizes_arr[0] = 1;    /* Number of sizes */
+        sizes_arr[1] = size; /* The size we want */
+        offset += 4;
 
         otag[5].ti_Tag = TAG_DONE;
         otag[5].ti_Data = 0;
@@ -113,30 +119,54 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         IDOS->Close(otag_fh);
     }
 
-    /* Try 3: Direct FreeType forcing via dummy .font (OTAG) */
-    struct TextAttr ta3 = { dummy_font, size, 0, FPF_DISKFONT };
-    tf = IDiskfont->OpenDiskFont(&ta3);
+    /* We combine both approaches: FSF_TAGGED inline tags AND the dummy .otag file on disk. 
+       This satisfies both the memory parser and the disk fallback parser. */
+    struct TagItem dyn_tags[] = { 
+        { OT_DeviceDPI, (72 << 16) | 72 },
+        { OT_Engine,    (uintptr_t)"ft2" }, 
+        { OT_FontFile,  (uintptr_t)filename },
+        { TAG_DONE,     0 } 
+    };
+    struct TTextAttr tta_dyn = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, dyn_tags };
+
+    /* Cascade 1: ft2 engine */
+    tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via FreeType forcing (OTAG)");
-        if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; 
+        LogDebug("OpenBestFont: SUCCESS via ft2 Engine");
+        if (engine_name) *engine_name = "diskfont.library (ft2)"; 
         IDOS->Delete(dummy_font);
         IDOS->Delete(dummy_otag);
         return tf; 
     }
 
-    /* Try 4: Direct Bullet forcing */
-    struct TagItem bullet_tags[] = { 
-        { OT_DeviceDPI, (72 << 16) | 72 },
-        { OT_OTagPath,  (uintptr_t)dummy_font },
-        { OT_Engine,    (uintptr_t)"bullet" }, 
-        { OT_FontFile,  (uintptr_t)filename },
-        { TAG_DONE,     0 } 
-    };
-    struct TTextAttr tta4 = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
-    tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
+    /* Cascade 2: freetype2 engine */
+    dyn_tags[1].ti_Data = (uintptr_t)"freetype2";
+    tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
-        if (engine_name) *engine_name = "diskfont.library (Bullet Engine)"; 
+        LogDebug("OpenBestFont: SUCCESS via freetype2 Engine");
+        if (engine_name) *engine_name = "diskfont.library (freetype2)"; 
+        IDOS->Delete(dummy_font);
+        IDOS->Delete(dummy_otag);
+        return tf; 
+    }
+
+    /* Cascade 3: freetype engine */
+    dyn_tags[1].ti_Data = (uintptr_t)"freetype";
+    tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via freetype Engine");
+        if (engine_name) *engine_name = "diskfont.library (freetype)"; 
+        IDOS->Delete(dummy_font);
+        IDOS->Delete(dummy_otag);
+        return tf; 
+    }
+
+    /* Cascade 4: bullet engine */
+    dyn_tags[1].ti_Data = (uintptr_t)"bullet";
+    tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
+    if (tf) { 
+        LogDebug("OpenBestFont: SUCCESS via bullet Engine");
+        if (engine_name) *engine_name = "diskfont.library (bullet)"; 
         IDOS->Delete(dummy_font);
         IDOS->Delete(dummy_otag);
         return tf; 
