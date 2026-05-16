@@ -59,27 +59,68 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     snprintf(dummy_font, 256, "T:font_dt_dummy_%lx.font", (uint32)IExec->FindTask(NULL));
     BPTR dummy_fh = IDOS->Open(dummy_font, MODE_NEWFILE);
     if (dummy_fh) {
-        uint16 fch[2] = { 0x0F03, 0 }; /* FCH_ID for outline, 0 entries */
+        uint16 fch[2] = { 0x0F03, 1 }; /* FCH_ID for outline, 1 entry */
         IDOS->Write(dummy_fh, fch, sizeof(fch));
+        
+        /* Write a dummy TFontContents entry (260 bytes) */
+        char dummy_tfc[260];
+        memset(dummy_tfc, 0, 260);
+        /* Set tfc_YSize to the requested size just in case */
+        dummy_tfc[256] = (size >> 8) & 0xFF;
+        dummy_tfc[257] = size & 0xFF;
+        IDOS->Write(dummy_fh, dummy_tfc, 260);
+        
         IDOS->Close(dummy_fh);
     }
 
-    /* Try 3: Direct FreeType forcing via dummy .font and inline tags */
-    struct TagItem ft_tags[] = { 
-        { OT_DeviceDPI, (72 << 16) | 72 },
-        { OT_OTagPath,  (uintptr_t)dummy_font },
-        { OT_Engine,    (uintptr_t)"ft2" }, 
-        { OT_FontFile,  (uintptr_t)filename },
-        { OT_FontFormat, (uintptr_t)"truetype" },
-        { OT_PointHeight, (uint32)(size << 16) },
-        { TAG_DONE,     0 } 
-    };
-    struct TTextAttr tta3 = { dummy_font, size, 0, FSF_TAGGED | FPF_DISKFONT, ft_tags };
-    tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta3);
+    /* Generate the companion .otag file using byte offsets for strings */
+    char dummy_otag[256];
+    snprintf(dummy_otag, 256, "T:font_dt_dummy_%lx.otag", (uint32)IExec->FindTask(NULL));
+    BPTR otag_fh = IDOS->Open(dummy_otag, MODE_NEWFILE);
+    if (otag_fh) {
+        struct TagItem otag[6];
+        char otag_buf[1024];
+        uint32 offset = 6 * sizeof(struct TagItem);
+
+        otag[0].ti_Tag = OT_FileIdent;
+        /* ti_Data will be the total file size, set later */
+
+        otag[1].ti_Tag = OT_Engine;
+        otag[1].ti_Data = offset;
+        IUtility->Strlcpy(otag_buf + offset, "ft2", sizeof(otag_buf) - offset);
+        offset += strlen(otag_buf + offset) + 1;
+
+        otag[2].ti_Tag = OT_FontFormat;
+        otag[2].ti_Data = offset;
+        IUtility->Strlcpy(otag_buf + offset, "truetype", sizeof(otag_buf) - offset);
+        offset += strlen(otag_buf + offset) + 1;
+
+        otag[3].ti_Tag = OT_FontFile;
+        otag[3].ti_Data = offset;
+        IUtility->Strlcpy(otag_buf + offset, filename, sizeof(otag_buf) - offset);
+        offset += strlen(otag_buf + offset) + 1;
+
+        otag[4].ti_Tag = OT_PointHeight;
+        otag[4].ti_Data = (uint32)(size << 16);
+
+        otag[5].ti_Tag = TAG_DONE;
+        otag[5].ti_Data = 0;
+
+        otag[0].ti_Data = offset; /* Total file size */
+
+        IExec->CopyMem(otag, otag_buf, 6 * sizeof(struct TagItem));
+        IDOS->Write(otag_fh, otag_buf, offset);
+        IDOS->Close(otag_fh);
+    }
+
+    /* Try 3: Direct FreeType forcing via dummy .font (OTAG) */
+    struct TextAttr ta3 = { dummy_font, size, 0, FPF_DISKFONT };
+    tf = IDiskfont->OpenDiskFont(&ta3);
     if (tf) { 
-        LogDebug("OpenBestFont: SUCCESS via FreeType forcing");
+        LogDebug("OpenBestFont: SUCCESS via FreeType forcing (OTAG)");
         if (engine_name) *engine_name = "diskfont.library (FreeType Engine)"; 
         IDOS->Delete(dummy_font);
+        IDOS->Delete(dummy_otag);
         return tf; 
     }
 
@@ -91,16 +132,18 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         { OT_FontFile,  (uintptr_t)filename },
         { TAG_DONE,     0 } 
     };
-    struct TTextAttr tta4 = { dummy_font, size, 0, FSF_TAGGED | FPF_DISKFONT, bullet_tags };
+    struct TTextAttr tta4 = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, bullet_tags };
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta4);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via Bullet forcing");
         if (engine_name) *engine_name = "diskfont.library (Bullet Engine)"; 
         IDOS->Delete(dummy_font);
+        IDOS->Delete(dummy_otag);
         return tf; 
     }
 
     IDOS->Delete(dummy_font);
+    IDOS->Delete(dummy_otag);
 
     /* Try 5: Legacy non-tagged */
     struct TextAttr ta5 = { filename, size, 0, 0 };
