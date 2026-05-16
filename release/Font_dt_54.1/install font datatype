@@ -1,0 +1,40 @@
+# font.datatype 54.1 Modern Installation Script
+# For AmigaOS 4 Installation Utility
+from installer import *
+import os
+
+app_name = "font.datatype"
+version = "54.1"
+welcome_text = "Welcome to the %s %s Installer.\n\nThis script will install the updated multi-engine font datatype to your system, adding high-fidelity FreeType support and improved fallback handling for modern font formats." % (app_name, version)
+finish_text = "%s %s has been installed successfully!\n\nPlease reboot your Amiga or flush your datatypes cache for the new datatype to take effect globally." % (app_name, version)
+
+# 1. Welcome Page
+welcome_page = NewPage(WELCOME)
+SetString(welcome_page, "message", welcome_text)
+
+# 2. Readme Page
+# Renamed font.datatype.readme to readme.txt to help the utility find it automatically
+readme_page = NewPage(README)
+
+# 3. Destination Page
+# We install to SYS:, so we default it there. Users shouldn't typically change this.
+dest_page = NewPage(DESTINATION)
+SetString(dest_page, "message", "Select the system boot drive where the datatype will be installed.")
+SetString(dest_page, "destination", "SYS:")
+
+# 4. Package Selection
+app_package = AddPackage(FILEPACKAGE, 
+                         name="font.datatype Library", 
+                         description="The core datatype and system descriptor.",
+                         files=["Classes", "Devs"],
+                         optional=False)
+
+# 5. Progress Page
+install_page = NewPage(INSTALL)
+
+# 6. Finish Page
+final_page = NewPage(FINISH)
+SetString(final_page, "message", finish_text)
+
+# --- Run the Installer ---
+RunInstaller()
