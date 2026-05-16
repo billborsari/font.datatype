@@ -59,19 +59,11 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     snprintf(dummy_font, 256, "T:font_dt_dummy_%lx.font", (uint32)IExec->FindTask(NULL));
     BPTR dummy_fh = IDOS->Open(dummy_font, MODE_NEWFILE);
     if (dummy_fh) {
-        uint16 fch[2] = { 0x0F03, 1 }; /* FCH_ID for outline, 1 entry */
+        uint16 fch[2] = { 0x0F03, 0 }; /* FCH_ID for outline, 0 entries */
         IDOS->Write(dummy_fh, fch, sizeof(fch));
-        
-        /* Write a dummy TFontContents entry (260 bytes) */
-        char dummy_tfc[260];
-        memset(dummy_tfc, 0, 260);
-        /* tfc_FileName is 256 bytes, tfc_TagCount is 2 bytes, tfc_YSize is 2 bytes */
-        /* Set tfc_YSize at offset 258 */
-        dummy_tfc[258] = (size >> 8) & 0xFF;
-        dummy_tfc[259] = size & 0xFF;
-        IDOS->Write(dummy_fh, dummy_tfc, 260);
-        
         IDOS->Close(dummy_fh);
+    } else {
+        LogDebug("OpenBestFont: FAILED to create dummy .font file %s", dummy_font);
     }
 
     /* Generate the companion .otag file using byte offsets for strings */
@@ -90,16 +82,19 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         otag[1].ti_Data = offset;
         IUtility->Strlcpy(otag_buf + offset, "ft2", sizeof(otag_buf) - offset);
         offset += strlen(otag_buf + offset) + 1;
+        offset = (offset + 1) & ~1; /* Align to 2 bytes */
 
         otag[2].ti_Tag = OT_FontFormat;
         otag[2].ti_Data = offset;
         IUtility->Strlcpy(otag_buf + offset, "truetype", sizeof(otag_buf) - offset);
         offset += strlen(otag_buf + offset) + 1;
+        offset = (offset + 1) & ~1; /* Align to 2 bytes */
 
         otag[3].ti_Tag = OT_FontFile;
         otag[3].ti_Data = offset;
         IUtility->Strlcpy(otag_buf + offset, filename, sizeof(otag_buf) - offset);
         offset += strlen(otag_buf + offset) + 1;
+        offset = (offset + 1) & ~1; /* Align to 2 bytes */
 
         otag[4].ti_Tag = OT_AvailSizes;
         offset = (offset + 3) & ~3; /* Align to 4 bytes before array */
@@ -117,6 +112,8 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
         IExec->CopyMem(otag, otag_buf, 6 * sizeof(struct TagItem));
         IDOS->Write(otag_fh, otag_buf, offset);
         IDOS->Close(otag_fh);
+    } else {
+        LogDebug("OpenBestFont: FAILED to create dummy .otag file %s", dummy_otag);
     }
 
     /* We combine both approaches: FSF_TAGGED inline tags AND the dummy .otag file on disk. 
@@ -130,6 +127,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     struct TTextAttr tta_dyn = { dummy_font, size, FSF_TAGGED, FPF_DISKFONT, dyn_tags };
 
     /* Cascade 1: ft2 engine */
+    LogDebug("OpenBestFont: Trying ft2...");
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
     if (tf) { 
         LogDebug("OpenBestFont: SUCCESS via ft2 Engine");
@@ -140,6 +138,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     }
 
     /* Cascade 2: freetype2 engine */
+    LogDebug("OpenBestFont: Trying freetype2...");
     dyn_tags[1].ti_Data = (uintptr_t)"freetype2";
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
     if (tf) { 
@@ -151,6 +150,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     }
 
     /* Cascade 3: freetype engine */
+    LogDebug("OpenBestFont: Trying freetype...");
     dyn_tags[1].ti_Data = (uintptr_t)"freetype";
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
     if (tf) { 
@@ -162,6 +162,7 @@ static struct TextFont *OpenBestFont(STRPTR filename, uint32 size, const char **
     }
 
     /* Cascade 4: bullet engine */
+    LogDebug("OpenBestFont: Trying bullet...");
     dyn_tags[1].ti_Data = (uintptr_t)"bullet";
     tf = IDiskfont->OpenDiskFont((struct TextAttr *)&tta_dyn);
     if (tf) { 
