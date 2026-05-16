@@ -1,12 +1,13 @@
 Short:        DataType for Amiga fonts
 Author:       Michal Letowski, Fredrik Wikstrom (OS4 port)
-Uploader:     Fredrik Wikstrom <fredrik@a500.org>
+Uploader:     Fredrik Wikstrom <fredrik@a500.org>, Bill Borsari
 Type:         util/dtype
-Version:      39.6
+Version:      54.1
 Architecture: ppc-amigaos
 
 This is an OS4 port of Michal Letowski's font.datatype:
 http://aminet.net/package/util/dtype/FontDT-1.3
+GitHub: https://github.com/billborsari/font.datatype
 
 It may crash on some fonts so be warned. This also happens with the m68k
 binary.
@@ -23,6 +24,11 @@ To enable font antialiasing (assuming AA is enabled in OS4):
 
 Changes:
 
+54.1 (16-May-2026)
+ - Added support for direct TrueType/OpenType/PostScript rendering via ft2.engine
+ - Implemented dynamic .otag generation workaround for raw outline fonts
+ - Fixed absolute path resolution for font files
+
 39.6 (30-Jan-2008)
  - Added TRUECOLOR/S option (makes antialiased font rendering possible)
  - Added FontDT.guide file to archive
@@ -36,7 +42,7 @@ displaying Amiga fonts. It will load normal fonts, colour fonts and outline
 fonts. Configuration files allow user to customize appearance of fonts.
 
         This is version 1.3, a bug fix to version 1.2 (reduced stack usage -
-no more problems with MultiView, MungWall hit fixed). Docs in AmigaGuide®
+no more problems with MultiView, MungWall hit fixed). Docs in AmigaGuideÂ®
 format and Installer script are included. Partial source is also included.
 
         FontDT-1.3 is Freeware.
